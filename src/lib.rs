@@ -16,12 +16,12 @@ struct Tasks {
 }
 
 pub fn add(task: String) -> std::io::Result<()> {
+    let mut tasks_struct: Tasks = get_tasks();
+
     let new_task = Task {
-        id: 1,
+        id: get_next_task_id(&tasks_struct.tasks),
         description: task,
     };
-
-    let mut tasks_struct: Tasks = get_tasks();
 
     tasks_struct.tasks.push(new_task);
 
@@ -49,4 +49,37 @@ fn get_tasks() -> Tasks {
     f.read_to_string(&mut buffer).unwrap();
 
     return toml::from_str(&buffer).unwrap();
+}
+
+fn get_next_task_id(tasks: &Vec<Task>) -> u32 {
+    let mut highest_id: u32 = 0;
+
+    for task in tasks {
+        if task.id > highest_id {
+            highest_id = task.id;
+        }
+    }
+
+    return highest_id + 1;
+
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn uses_next_lowest_unused_int_for_task_number() {
+        let mut existing_tasks = Vec::new();
+
+        let task = Task {
+            id: 1,
+            description: "buy some milk".to_string()
+        };
+
+        existing_tasks.push(task);
+
+
+        assert_eq!(2, get_next_task_id(&existing_tasks))
+    }
 }
