@@ -7,6 +7,7 @@ use std::io::prelude::*;
 struct Task {
     id: u32,
     description: String,
+    status: char // 't' = to-do, 'p' = in progress, 'd' = done
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -21,6 +22,7 @@ pub fn add(task: String) -> std::io::Result<()> {
     let new_task = Task {
         id: get_next_task_id(&tasks_struct.tasks),
         description: task,
+        status: 't'
     };
 
     tasks_struct.tasks.push(new_task);
@@ -30,6 +32,18 @@ pub fn add(task: String) -> std::io::Result<()> {
     let mut task_file = File::create("tasks.toml")?;
 
     task_file.write_all(&task_toml)?;
+
+    Ok(())
+}
+
+pub fn start(task_id: u32) -> std::io::Result<()> {
+    let mut tasks_struct: Tasks = get_tasks();
+
+    // find task by id
+
+    // set status to 'p'
+
+    // persist to file
 
     Ok(())
 }
@@ -74,7 +88,8 @@ mod tests {
 
         let task = Task {
             id: 1,
-            description: "buy some milk".to_string()
+            description: "buy some milk".to_string(),
+            status: 'p'
         };
 
         existing_tasks.push(task);
