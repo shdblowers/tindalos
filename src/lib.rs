@@ -7,12 +7,11 @@ use std::io::prelude::*;
 struct Task {
     id: u32,
     description: String,
-    status: char // 't' = to-do, 'p' = in progress, 'd' = done
+    status: char, // 't' = to-do, 'p' = in progress, 'd' = done
 }
 
 #[derive(Serialize, Deserialize, Debug)]
 struct Tasks {
-    filename: String,
     tasks: Vec<Task>,
 }
 
@@ -22,16 +21,12 @@ pub fn add(task: String) -> std::io::Result<()> {
     let new_task = Task {
         id: get_next_task_id(&tasks_struct.tasks),
         description: task,
-        status: 't'
+        status: 't',
     };
 
     tasks_struct.tasks.push(new_task);
 
-    let task_toml = toml::to_vec(&tasks_struct).unwrap();
-
-    let mut task_file = File::create("tasks.toml")?;
-
-    task_file.write_all(&task_toml)?;
+    save_tasks(tasks_struct)?;
 
     Ok(())
 }
@@ -39,11 +34,39 @@ pub fn add(task: String) -> std::io::Result<()> {
 pub fn start(task_id: u32) -> std::io::Result<()> {
     let mut tasks_struct: Tasks = get_tasks();
 
-    // find task by id
+    let i = tasks_struct
+        .tasks
+        .iter()
+        .position(|t| t.id == task_id)
+        .unwrap();
 
-    // set status to 'p'
+    let mut task_to_update = tasks_struct.tasks.remove(i);
 
-    // persist to file
+    task_to_update.status = 'p';
+
+    tasks_struct.tasks.push(task_to_update);
+
+    save_tasks(tasks_struct)?;
+
+    Ok(())
+}
+
+pub fn finish(task_id: u32) -> std::io::Result<()> {
+    let mut tasks_struct: Tasks = get_tasks();
+
+    let i = tasks_struct
+        .tasks
+        .iter()
+        .position(|t| t.id == task_id)
+        .unwrap();
+
+    let mut task_to_update = tasks_struct.tasks.remove(i);
+
+    task_to_update.status = 'd';
+
+    tasks_struct.tasks.push(task_to_update);
+
+    save_tasks(tasks_struct)?;
 
     Ok(())
 }
@@ -57,12 +80,29 @@ pub fn list() -> std::io::Result<()> {
 }
 
 fn get_tasks() -> Tasks {
-    let mut f = File::open("tasks.toml").unwrap();
+    let mut file = File::open("tasks.toml").unwrap_or_else(|_err| {
+        std::fs::File::create("tasks.toml").unwrap();
+        return File::open("tasks.toml").unwrap();
+    });
+
     let mut buffer = String::new();
 
-    f.read_to_string(&mut buffer).unwrap();
+    file.read_to_string(&mut buffer).unwrap();
 
-    return toml::from_str(&buffer).unwrap();
+    let t = toml::from_str(&buffer);
+
+    return match t {
+        Ok(tasks) => tasks,
+        Err(_error) => Tasks { tasks: Vec::new() },
+    };
+}
+
+fn save_tasks(tasks: Tasks) -> std::io::Result<()> {
+    let task_toml = toml::to_vec(&tasks).unwrap();
+
+    let mut task_file = File::create("tasks.toml")?;
+
+    return task_file.write_all(&task_toml);
 }
 
 fn get_next_task_id(tasks: &Vec<Task>) -> u32 {
@@ -75,7 +115,6 @@ fn get_next_task_id(tasks: &Vec<Task>) -> u32 {
     }
 
     return highest_id + 1;
-
 }
 
 #[cfg(test)]
@@ -89,11 +128,10 @@ mod tests {
         let task = Task {
             id: 1,
             description: "buy some milk".to_string(),
-            status: 'p'
+            status: 'p',
         };
 
         existing_tasks.push(task);
-
 
         assert_eq!(2, get_next_task_id(&existing_tasks))
     }
