@@ -1,13 +1,14 @@
 use serde::{Deserialize, Serialize};
+use std::collections::BTreeMap;
 use std::fs::File;
 use std::io::prelude::*;
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug)]
 struct Task {
     id: u32,
     description: String,
     status: char, // 't' = to-do, 'p' = in progress, 'd' = done
-    date_done: Option<chrono::DateTime<chrono::Utc>>,
+    updated_at: chrono::DateTime<chrono::Utc>,
 }
 
 impl std::fmt::Display for Task {
@@ -25,16 +26,25 @@ impl std::fmt::Display for Tasks {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         let done_tasks = self.tasks.iter().filter(|t| t.status == 'd');
 
-        if done_tasks.clone().count() > 0 {
-            write!(f, "\nDONE\n====\n")?;
+        let mut done_tasks_by_dates: BTreeMap<String, Vec<&Task>> = BTreeMap::new();
+
+        for task in done_tasks.clone() {
+            let task_done_date: String = task.updated_at.format("%A (%y-%m-%d)").to_string();
+            done_tasks_by_dates
+                .entry(task_done_date)
+                .or_insert(Vec::new())
+                .push(task.clone())
         }
 
-        done_tasks.clone().for_each(|t| t.fmt(f).unwrap());
+        for (date, tasks) in done_tasks_by_dates {
+            write!(f, "\nDone {}\n======================\n", date)?;
+            tasks.iter().for_each(|t| t.fmt(f).unwrap());
+        }
 
         let in_progress_tasks = self.tasks.iter().filter(|t| t.status == 'p');
 
         if in_progress_tasks.clone().count() > 0 {
-            write!(f, "\nIN PROGRESS\n===========\n")?;
+            write!(f, "\nIn Progress\n===========\n")?;
         }
 
         in_progress_tasks.clone().for_each(|t| t.fmt(f).unwrap());
@@ -42,7 +52,7 @@ impl std::fmt::Display for Tasks {
         let to_do_tasks = self.tasks.iter().filter(|t| t.status == 't');
 
         if to_do_tasks.clone().count() > 0 {
-            write!(f, "\nTODO\n====\n")?;
+            write!(f, "\nTodo\n====\n")?;
         }
 
         to_do_tasks.clone().for_each(|t| t.fmt(f).unwrap());
@@ -62,7 +72,7 @@ pub fn add(task: String) -> std::io::Result<()> {
         id: get_next_task_id(&tasks_struct.tasks),
         description: task,
         status: 't',
-        date_done: None,
+        updated_at: chrono::Utc::now(),
     };
 
     tasks_struct.tasks.push(new_task);
@@ -104,7 +114,7 @@ pub fn finish(task_id: u32) -> std::io::Result<()> {
     let mut task_to_update = tasks_struct.tasks.remove(i);
 
     task_to_update.status = 'd';
-    task_to_update.date_done = Some(chrono::Utc::now());
+    task_to_update.updated_at = chrono::Utc::now();
 
     tasks_struct.tasks.push(task_to_update);
 
@@ -171,7 +181,7 @@ mod tests {
             id: 1,
             description: "buy some milk".to_string(),
             status: 'p',
-            date_done: None,
+            updated_at: chrono::Utc::now(),
         };
 
         existing_tasks.push(task);
@@ -185,7 +195,7 @@ mod tests {
             id: 33,
             description: "ring up john".to_string(),
             status: 't',
-            date_done: None,
+            updated_at: chrono::Utc::now(),
         };
 
         assert_eq!("#033: ring up john\n", format!("{}", task_todo));
