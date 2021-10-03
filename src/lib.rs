@@ -1,88 +1,18 @@
-use serde::{Deserialize, Serialize};
-use std::collections::BTreeMap;
+use crate::tasks::{Task, TaskStatus, Tasks};
+use chrono::Utc;
 use std::fs::File;
-use std::io::prelude::*;
+use std::io::{Read, Result as IoResult, Write};
 
-#[derive(Serialize, Deserialize, PartialEq)]
-enum TaskStatus {
-    Todo,
-    InProgress,
-    Done,
-}
+mod tasks;
 
-#[derive(Serialize, Deserialize)]
-struct Task {
-    id: u32,
-    description: String,
-    status: TaskStatus,
-    updated_at: chrono::DateTime<chrono::Utc>,
-}
-
-impl std::fmt::Display for Task {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        return write!(f, "#{:03}: {}\n", self.id, self.description);
-    }
-}
-
-#[derive(Serialize, Deserialize)]
-struct Tasks {
-    tasks: Vec<Task>,
-}
-
-impl std::fmt::Display for Tasks {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        let done_tasks = self.tasks.iter().filter(|t| t.status == TaskStatus::Done);
-
-        let mut done_tasks_by_dates: BTreeMap<String, Vec<&Task>> = BTreeMap::new();
-
-        for task in done_tasks.clone() {
-            let task_done_date: String = task.updated_at.format("%a (%y-%m-%d)").to_string();
-            done_tasks_by_dates
-                .entry(task_done_date)
-                .or_insert(Vec::new())
-                .push(task.clone())
-        }
-
-        for (date, tasks) in done_tasks_by_dates {
-            write!(f, "\nDone {}\n{}\n", date, divider_string(date.len() + 5))?;
-            tasks.iter().for_each(|t| t.fmt(f).unwrap());
-        }
-
-        let in_progress_tasks = self
-            .tasks
-            .iter()
-            .filter(|t| t.status == TaskStatus::InProgress);
-
-        if in_progress_tasks.clone().count() > 0 {
-            write!(f, "\nIn Progress\n{}\n", divider_string(11))?;
-        }
-
-        in_progress_tasks.clone().for_each(|t| t.fmt(f).unwrap());
-
-        let to_do_tasks = self.tasks.iter().filter(|t| t.status == TaskStatus::Todo);
-
-        if to_do_tasks.clone().count() > 0 {
-            write!(f, "\nTodo\n{}\n", divider_string(4))?;
-        }
-
-        to_do_tasks.clone().for_each(|t| t.fmt(f).unwrap());
-
-        if done_tasks.count() + in_progress_tasks.count() + to_do_tasks.count() == 0 {
-            write!(f, "\nNo tasks found!\n")?;
-        }
-
-        return write!(f, "");
-    }
-}
-
-pub fn add(task: String) -> std::io::Result<()> {
+pub fn add(task: String) -> IoResult<()> {
     let mut tasks_struct: Tasks = get_tasks();
 
     let new_task = Task {
         id: get_next_task_id(&tasks_struct.tasks),
         description: task,
         status: TaskStatus::Todo,
-        updated_at: chrono::Utc::now(),
+        updated_at: Utc::now(),
     };
 
     tasks_struct.tasks.push(new_task);
@@ -92,7 +22,7 @@ pub fn add(task: String) -> std::io::Result<()> {
     Ok(())
 }
 
-pub fn start(task_id: u32) -> std::io::Result<()> {
+pub fn start(task_id: u32) -> IoResult<()> {
     let mut tasks_struct: Tasks = get_tasks();
 
     let i = tasks_struct
@@ -112,7 +42,7 @@ pub fn start(task_id: u32) -> std::io::Result<()> {
     Ok(())
 }
 
-pub fn finish(task_id: u32) -> std::io::Result<()> {
+pub fn finish(task_id: u32) -> IoResult<()> {
     let mut tasks_struct: Tasks = get_tasks();
 
     let i = tasks_struct
@@ -124,7 +54,7 @@ pub fn finish(task_id: u32) -> std::io::Result<()> {
     let mut task_to_update = tasks_struct.tasks.remove(i);
 
     task_to_update.status = TaskStatus::Done;
-    task_to_update.updated_at = chrono::Utc::now();
+    task_to_update.updated_at = Utc::now();
 
     tasks_struct.tasks.push(task_to_update);
 
@@ -133,7 +63,7 @@ pub fn finish(task_id: u32) -> std::io::Result<()> {
     Ok(())
 }
 
-pub fn list() -> std::io::Result<()> {
+pub fn list() -> IoResult<()> {
     let tasks_struct: Tasks = get_tasks();
 
     println!("{}", tasks_struct);
@@ -143,7 +73,7 @@ pub fn list() -> std::io::Result<()> {
 
 fn get_tasks() -> Tasks {
     let mut file = File::open("tasks.toml").unwrap_or_else(|_err| {
-        std::fs::File::create("tasks.toml").unwrap();
+        File::create("tasks.toml").unwrap();
         return File::open("tasks.toml").unwrap();
     });
 
@@ -159,7 +89,7 @@ fn get_tasks() -> Tasks {
     };
 }
 
-fn save_tasks(tasks: Tasks) -> std::io::Result<()> {
+fn save_tasks(tasks: Tasks) -> IoResult<()> {
     let task_toml = toml::to_vec(&tasks).unwrap();
 
     let mut task_file = File::create("tasks.toml")?;
@@ -179,16 +109,6 @@ fn get_next_task_id(tasks: &Vec<Task>) -> u32 {
     return highest_id + 1;
 }
 
-fn divider_string(len: usize) -> String {
-    let mut s = String::new();
-
-    for _ in 0..len {
-        s.push_str("=")
-    }
-
-    return s;
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -201,7 +121,7 @@ mod tests {
             id: 1,
             description: "buy some milk".to_string(),
             status: TaskStatus::InProgress,
-            updated_at: chrono::Utc::now(),
+            updated_at: Utc::now(),
         };
 
         existing_tasks.push(task);
@@ -215,7 +135,7 @@ mod tests {
             id: 33,
             description: "ring up john".to_string(),
             status: TaskStatus::Todo,
-            updated_at: chrono::Utc::now(),
+            updated_at: Utc::now(),
         };
 
         assert_eq!("#033: ring up john\n", format!("{}", task_todo));

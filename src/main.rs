@@ -1,6 +1,5 @@
-extern crate tindalos;
-
 use std::env;
+use tindalos;
 
 fn main() {
     let mut args: Vec<String> = env::args().collect();
