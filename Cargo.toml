@@ -9,4 +9,5 @@ edition = "2018"
 [dependencies]
 chrono = { version = "0.4", features = ["serde"]}
 serde = { version = "1.0", features = ["derive"] }
+dirs = "1.0.4"
 toml = "0.5.3"

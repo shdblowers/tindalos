@@ -2,6 +2,7 @@ use crate::tasks::{Task, TaskStatus, Tasks};
 use chrono::Utc;
 use std::fs::File;
 use std::io::{Read, Result as IoResult, Write};
+use std::path::PathBuf;
 
 mod tasks;
 
@@ -72,9 +73,11 @@ pub fn list() -> IoResult<()> {
 }
 
 fn get_tasks() -> Tasks {
-    let mut file = File::open("tasks.toml").unwrap_or_else(|_err| {
-        File::create("tasks.toml").unwrap();
-        return File::open("tasks.toml").unwrap();
+    let config_file_path = get_tasks_file_path();
+
+    let mut file = File::open(&config_file_path).unwrap_or_else(|_err| {
+        File::create(&config_file_path).unwrap();
+        return File::open(&config_file_path).unwrap();
     });
 
     let mut buffer = String::new();
@@ -91,8 +94,8 @@ fn get_tasks() -> Tasks {
 
 fn save_tasks(tasks: Tasks) -> IoResult<()> {
     let task_toml = toml::to_vec(&tasks).unwrap();
-
-    let mut task_file = File::create("tasks.toml")?;
+    let config_file_path = get_tasks_file_path();
+    let mut task_file = File::create(&config_file_path)?;
 
     return task_file.write_all(&task_toml);
 }
@@ -107,6 +110,14 @@ fn get_next_task_id(tasks: &Vec<Task>) -> u32 {
     }
 
     return highest_id + 1;
+}
+
+fn get_tasks_file_path() -> PathBuf {
+    let mut config_file_path: PathBuf = dirs::config_dir().unwrap();
+    config_file_path.push("tindalos_tasks");
+    config_file_path.set_extension("toml");
+
+    return config_file_path;
 }
 
 #[cfg(test)]
