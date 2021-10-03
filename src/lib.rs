@@ -7,6 +7,7 @@ struct Task {
     id: u32,
     description: String,
     status: char, // 't' = to-do, 'p' = in progress, 'd' = done
+    date_done: Option<chrono::DateTime<chrono::Utc>>,
 }
 
 impl std::fmt::Display for Task {
@@ -48,6 +49,7 @@ pub fn add(task: String) -> std::io::Result<()> {
         id: get_next_task_id(&tasks_struct.tasks),
         description: task,
         status: 't',
+        date_done: None,
     };
 
     tasks_struct.tasks.push(new_task);
@@ -89,6 +91,7 @@ pub fn finish(task_id: u32) -> std::io::Result<()> {
     let mut task_to_update = tasks_struct.tasks.remove(i);
 
     task_to_update.status = 'd';
+    task_to_update.date_done = Some(chrono::Utc::now());
 
     tasks_struct.tasks.push(task_to_update);
 
@@ -155,6 +158,7 @@ mod tests {
             id: 1,
             description: "buy some milk".to_string(),
             status: 'p',
+            date_done: None,
         };
 
         existing_tasks.push(task);
@@ -168,28 +172,7 @@ mod tests {
             id: 33,
             description: "ring up john".to_string(),
             status: 't',
-        };
-
-        assert_eq!(
-            "| 033 | Todo        | ring up john\n",
-            format!("{}", task_todo)
-        );
-
-        let task_in_progress = Task {
-            id: 9,
-            description: "paint bathroom walls".to_string(),
-            status: 'p',
-        };
-
-        assert_eq!(
-            "| 009 | In Progress | paint bathroom walls\n",
-            format!("{}", task_in_progress)
-        );
-
-        let task_done = Task {
-            id: 101,
-            description: "do the washing-up".to_string(),
-            status: 'd',
+            date_done: None,
         };
 
         assert_eq!(
