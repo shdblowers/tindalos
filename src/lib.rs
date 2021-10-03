@@ -3,11 +3,18 @@ use std::collections::BTreeMap;
 use std::fs::File;
 use std::io::prelude::*;
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, PartialEq)]
+enum TaskStatus {
+    Todo,
+    InProgress,
+    Done,
+}
+
+#[derive(Serialize, Deserialize)]
 struct Task {
     id: u32,
     description: String,
-    status: char, // 't' = to-do, 'p' = in progress, 'd' = done
+    status: TaskStatus,
     updated_at: chrono::DateTime<chrono::Utc>,
 }
 
@@ -24,7 +31,7 @@ struct Tasks {
 
 impl std::fmt::Display for Tasks {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        let done_tasks = self.tasks.iter().filter(|t| t.status == 'd');
+        let done_tasks = self.tasks.iter().filter(|t| t.status == TaskStatus::Done);
 
         let mut done_tasks_by_dates: BTreeMap<String, Vec<&Task>> = BTreeMap::new();
 
@@ -41,7 +48,10 @@ impl std::fmt::Display for Tasks {
             tasks.iter().for_each(|t| t.fmt(f).unwrap());
         }
 
-        let in_progress_tasks = self.tasks.iter().filter(|t| t.status == 'p');
+        let in_progress_tasks = self
+            .tasks
+            .iter()
+            .filter(|t| t.status == TaskStatus::InProgress);
 
         if in_progress_tasks.clone().count() > 0 {
             write!(f, "\nIn Progress\n===========\n")?;
@@ -49,7 +59,7 @@ impl std::fmt::Display for Tasks {
 
         in_progress_tasks.clone().for_each(|t| t.fmt(f).unwrap());
 
-        let to_do_tasks = self.tasks.iter().filter(|t| t.status == 't');
+        let to_do_tasks = self.tasks.iter().filter(|t| t.status == TaskStatus::Todo);
 
         if to_do_tasks.clone().count() > 0 {
             write!(f, "\nTodo\n====\n")?;
@@ -71,7 +81,7 @@ pub fn add(task: String) -> std::io::Result<()> {
     let new_task = Task {
         id: get_next_task_id(&tasks_struct.tasks),
         description: task,
-        status: 't',
+        status: TaskStatus::Todo,
         updated_at: chrono::Utc::now(),
     };
 
@@ -93,7 +103,7 @@ pub fn start(task_id: u32) -> std::io::Result<()> {
 
     let mut task_to_update = tasks_struct.tasks.remove(i);
 
-    task_to_update.status = 'p';
+    task_to_update.status = TaskStatus::InProgress;
 
     tasks_struct.tasks.push(task_to_update);
 
@@ -113,7 +123,7 @@ pub fn finish(task_id: u32) -> std::io::Result<()> {
 
     let mut task_to_update = tasks_struct.tasks.remove(i);
 
-    task_to_update.status = 'd';
+    task_to_update.status = TaskStatus::Done;
     task_to_update.updated_at = chrono::Utc::now();
 
     tasks_struct.tasks.push(task_to_update);
@@ -180,7 +190,7 @@ mod tests {
         let task = Task {
             id: 1,
             description: "buy some milk".to_string(),
-            status: 'p',
+            status: TaskStatus::InProgress,
             updated_at: chrono::Utc::now(),
         };
 
@@ -194,7 +204,7 @@ mod tests {
         let task_todo = Task {
             id: 33,
             description: "ring up john".to_string(),
-            status: 't',
+            status: TaskStatus::Todo,
             updated_at: chrono::Utc::now(),
         };
 
