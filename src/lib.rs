@@ -1,18 +1,44 @@
 use serde::{Deserialize, Serialize};
-use std::fmt::Debug;
 use std::fs::File;
 use std::io::prelude::*;
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize)]
 struct Task {
     id: u32,
     description: String,
     status: char, // 't' = to-do, 'p' = in progress, 'd' = done
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+impl std::fmt::Display for Task {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        let status = match self.status {
+            't' => "Todo",
+            'p' => "In Progress",
+            'd' => "Done",
+            ___ => "Unknown Status",
+        };
+
+        return write!(
+            f,
+            "| {:03} | {:11} | {}\n",
+            self.id, status, self.description
+        );
+    }
+}
+
+#[derive(Serialize, Deserialize)]
 struct Tasks {
     tasks: Vec<Task>,
+}
+
+impl std::fmt::Display for Tasks {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        write!(f, "\n| ID  | STATUS      | DESCRIPTION\n")?;
+        for task in &self.tasks {
+            task.fmt(f)?;
+        }
+        return write!(f, "");
+    }
 }
 
 pub fn add(task: String) -> std::io::Result<()> {
@@ -74,7 +100,7 @@ pub fn finish(task_id: u32) -> std::io::Result<()> {
 pub fn list() -> std::io::Result<()> {
     let tasks_struct: Tasks = get_tasks();
 
-    println!("Args: {:#?}", tasks_struct);
+    println!("{}", tasks_struct);
 
     Ok(())
 }
@@ -134,5 +160,41 @@ mod tests {
         existing_tasks.push(task);
 
         assert_eq!(2, get_next_task_id(&existing_tasks))
+    }
+
+    #[test]
+    fn prints_a_task_in_nice_format() {
+        let task_todo = Task {
+            id: 33,
+            description: "ring up john".to_string(),
+            status: 't',
+        };
+
+        assert_eq!(
+            "| 033 | Todo        | ring up john\n",
+            format!("{}", task_todo)
+        );
+
+        let task_in_progress = Task {
+            id: 9,
+            description: "paint bathroom walls".to_string(),
+            status: 'p',
+        };
+
+        assert_eq!(
+            "| 009 | In Progress | paint bathroom walls\n",
+            format!("{}", task_in_progress)
+        );
+
+        let task_done = Task {
+            id: 101,
+            description: "do the washing-up".to_string(),
+            status: 'd',
+        };
+
+        assert_eq!(
+            "| 101 | Done        | do the washing-up\n",
+            format!("{}", task_done)
+        );
     }
 }
