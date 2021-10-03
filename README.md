@@ -7,3 +7,7 @@ A CLI daily to-do organiser, written in Rust.
 ## Installation
 
 TODO.
+
+## Basic Usage
+
+TODO.
