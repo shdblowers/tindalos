@@ -13,18 +13,21 @@ fn main() {
         "add" => {
             let task = args[2..].join(" ");
             tindalos::add(task).unwrap();
+            tindalos::list().unwrap();
         }
         "start" => {
             let task_id_string = args[2].clone();
             let task_id = task_id_string.parse::<u32>().unwrap();
 
             tindalos::start(task_id).unwrap();
+            tindalos::list().unwrap();
         }
         "finish" => {
             let task_id_string = args[2].clone();
             let task_id = task_id_string.parse::<u32>().unwrap();
 
             tindalos::finish(task_id).unwrap();
+            tindalos::list().unwrap();
         }
         "list" => tindalos::list().unwrap(),
         _ => (),
