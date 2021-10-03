@@ -12,18 +12,7 @@ struct Task {
 
 impl std::fmt::Display for Task {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        let status = match self.status {
-            't' => "Todo",
-            'p' => "In Progress",
-            'd' => "Done",
-            ___ => "Unknown Status",
-        };
-
-        return write!(
-            f,
-            "| {:03} | {:11} | {}\n",
-            self.id, status, self.description
-        );
+        return write!(f, "#{:03}: {}\n", self.id, self.description);
     }
 }
 
@@ -34,10 +23,34 @@ struct Tasks {
 
 impl std::fmt::Display for Tasks {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        write!(f, "\n| ID  | STATUS      | DESCRIPTION\n")?;
-        for task in &self.tasks {
-            task.fmt(f)?;
+        let done_tasks = self.tasks.iter().filter(|t| t.status == 'd');
+
+        if done_tasks.clone().count() > 0 {
+            write!(f, "\nDONE\n====\n")?;
         }
+
+        done_tasks.clone().for_each(|t| t.fmt(f).unwrap());
+
+        let in_progress_tasks = self.tasks.iter().filter(|t| t.status == 'p');
+
+        if in_progress_tasks.clone().count() > 0 {
+            write!(f, "\nIN PROGRESS\n===========\n")?;
+        }
+
+        in_progress_tasks.clone().for_each(|t| t.fmt(f).unwrap());
+
+        let to_do_tasks = self.tasks.iter().filter(|t| t.status == 't');
+
+        if to_do_tasks.clone().count() > 0 {
+            write!(f, "\nTODO\n====\n")?;
+        }
+
+        to_do_tasks.clone().for_each(|t| t.fmt(f).unwrap());
+
+        if done_tasks.count() + in_progress_tasks.count() + to_do_tasks.count() == 0 {
+            write!(f, "\nNo tasks found!\n")?;
+        }
+
         return write!(f, "");
     }
 }
@@ -175,9 +188,6 @@ mod tests {
             date_done: None,
         };
 
-        assert_eq!(
-            "| 101 | Done        | do the washing-up\n",
-            format!("{}", task_done)
-        );
+        assert_eq!("#033: ring up john\n", format!("{}", task_todo));
     }
 }
